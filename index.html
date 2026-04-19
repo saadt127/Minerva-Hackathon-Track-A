@@ -1,0 +1,2259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tokyo Refill Infrastructure Decision Tool</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Turf.js for spatial analysis -->
+<script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+<!-- Chart.js for before/after comparison -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --paper: #efeae0;
+  --paper-2: #e4ddcf;
+  --paper-3: #d9d1bf;
+  --ink: #14110c;
+  --ink-2: #3a342c;
+  --muted: #6e6658;
+  --rule: #cfc8b9;
+  --rule-strong: #a89f8b;
+  --water: #1c5178;
+  --water-light: #4a8cb0;
+  --water-bg: #d9e5ec;
+  --desert: #b84722;
+  --desert-bg: #e8c9ba;
+  --gold: #c89b3c;
+  --gold-deep: #9a7522;
+  --served: #4a6b3a;
+  --served-bg: #c7d4bc;
+  --shadow-sm: 0 1px 2px rgba(20, 17, 12, 0.05);
+  --shadow: 0 2px 8px rgba(20, 17, 12, 0.08);
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font-ui);
+  color: var(--ink);
+  background: var(--paper);
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== LAYOUT ===== */
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 320px 1fr 360px;
+  grid-template-areas:
+    "header header header"
+    "left   map    right"
+    "footer footer footer";
+  height: 100vh;
+  gap: 0;
+}
+
+header.masthead {
+  grid-area: header;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 14px 22px 12px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.masthead .title-block {
+  flex: 0 0 auto;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.eyebrow .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--water);
+  display: inline-block;
+}
+
+h1.title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 28px;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  font-variation-settings: "opsz" 40;
+  color: var(--ink);
+}
+
+h1.title em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--water);
+}
+
+.subtitle {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 3px;
+  max-width: 640px;
+}
+
+/* Header metrics */
+.header-metrics {
+  display: flex;
+  gap: 0;
+  border-left: 1px solid var(--rule);
+}
+
+.metric {
+  padding: 4px 18px;
+  border-right: 1px solid var(--rule);
+  min-width: 120px;
+}
+
+.metric:last-child { border-right: none; }
+
+.metric-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.metric-value {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 80;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.metric-delta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.metric-delta.positive { color: var(--served); font-weight: 600; }
+.metric-delta.negative { color: var(--desert); font-weight: 600; }
+
+/* ===== SIDEBARS ===== */
+aside.panel {
+  background: var(--paper);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+aside.panel.left {
+  grid-area: left;
+  border-right: 1px solid var(--rule-strong);
+}
+
+aside.panel.right {
+  grid-area: right;
+  border-left: 1px solid var(--rule-strong);
+}
+
+.panel-section {
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.panel-section:last-child { border-bottom: none; }
+
+.panel-section h3 {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-section h3 .step-num {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 60;
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--water);
+  letter-spacing: 0;
+}
+
+/* ===== LAYER TOGGLES ===== */
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.layer-row:hover .layer-name { color: var(--water); }
+
+.layer-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 1px solid var(--rule-strong);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.layer-swatch.refill { background: var(--water); }
+.layer-swatch.desert {
+  background: linear-gradient(135deg, #f5e3d8 0%, var(--desert) 100%);
+}
+.layer-swatch.demand {
+  background: linear-gradient(135deg, #efeae0 0%, #5b7a96 100%);
+}
+.layer-swatch.candidate {
+  background: var(--gold);
+}
+.layer-swatch.recommended {
+  background: var(--gold-deep);
+  border: 2px solid var(--ink);
+}
+.layer-swatch.wards {
+  background: transparent;
+  border: 1.5px dashed var(--ink-2);
+}
+
+.layer-check {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--paper);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.layer-row.active .layer-check {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.layer-row.active .layer-check::after {
+  content: "";
+  width: 6px; height: 3px;
+  border-left: 1.5px solid var(--paper);
+  border-bottom: 1.5px solid var(--paper);
+  transform: rotate(-45deg) translateY(-1px);
+}
+
+.layer-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  transition: color 0.15s;
+  flex: 1;
+}
+
+.layer-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* ===== VIEW MODE TABS ===== */
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  margin-bottom: 4px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tab {
+  padding: 8px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  background: var(--paper);
+  color: var(--muted);
+  cursor: pointer;
+  border-right: 1px solid var(--rule);
+  transition: all 0.15s;
+  font-family: var(--font-ui);
+}
+
+.tab:last-child { border-right: none; }
+.tab:hover { color: var(--ink); background: var(--paper-2); }
+.tab.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* ===== SLIDERS ===== */
+.slider-row {
+  margin-bottom: 14px;
+}
+
+.slider-row:last-child { margin-bottom: 0; }
+
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 5px;
+}
+
+.slider-label .name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.slider-label .value {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--water);
+  font-weight: 600;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  background: var(--rule-strong);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--ink);
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--rule-strong);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--ink);
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--rule-strong);
+}
+
+/* ===== FILTER CHIPS ===== */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.chip {
+  padding: 4px 10px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--paper);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.chip:hover { color: var(--ink); border-color: var(--ink-2); }
+.chip.active {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+/* ===== MAP ===== */
+#map {
+  grid-area: map;
+  width: 100%;
+  height: 100%;
+  background: var(--paper-2);
+  position: relative;
+}
+
+.map-overlay {
+  position: absolute;
+  background: rgba(239, 234, 224, 0.92);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--rule-strong);
+  padding: 10px 14px;
+  border-radius: 4px;
+  z-index: 500;
+  font-size: 11.5px;
+  box-shadow: var(--shadow);
+}
+
+.map-overlay.legend {
+  bottom: 16px;
+  left: 16px;
+  max-width: 280px;
+}
+
+.map-overlay.legend h4 {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.legend-gradient {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  margin-bottom: 6px;
+}
+
+.gradient-bar {
+  height: 8px;
+  flex: 1;
+  border-radius: 1px;
+  border: 1px solid var(--rule);
+}
+
+.gradient-gap {
+  background: linear-gradient(to right, #f5e3d8, #e8b896, #d4804a, #b84722);
+}
+
+.gradient-demand {
+  background: linear-gradient(to right, #efeae0, #b8c4cc, #7d95a8, #1c5178);
+}
+
+.gradient-combined {
+  background: linear-gradient(to right, #efeae0, #d9c8a8, #c89b3c, #9a4722);
+}
+
+.legend-gradient span {
+  font-family: var(--font-mono);
+  color: var(--muted);
+  font-size: 9.5px;
+  min-width: 28px;
+}
+
+.legend-items {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--rule);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-dot.refill { background: var(--water); border: 1.5px solid #fff; box-shadow: 0 0 0 1px var(--water); }
+.legend-dot.candidate { background: var(--gold); transform: rotate(45deg); border-radius: 1px; width: 9px; height: 9px; }
+.legend-dot.recommended {
+  background: var(--gold-deep);
+  width: 11px; height: 11px;
+  border: 2px solid var(--ink);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+/* ===== MAP MARKERS (CUSTOM) ===== */
+.leaflet-container {
+  font-family: var(--font-ui);
+  background: var(--paper-2) !important;
+}
+
+.leaflet-control-zoom {
+  border: 1px solid var(--rule-strong) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.leaflet-control-zoom a {
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+  border-bottom: 1px solid var(--rule) !important;
+  font-family: var(--font-ui) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--paper-2) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--paper) !important;
+  border: 1px solid var(--rule-strong) !important;
+  border-radius: 4px !important;
+  box-shadow: var(--shadow) !important;
+  padding: 2px !important;
+}
+
+.leaflet-popup-content {
+  font-family: var(--font-ui) !important;
+  font-size: 12px !important;
+  margin: 12px 14px !important;
+  line-height: 1.5 !important;
+  color: var(--ink) !important;
+  min-width: 200px;
+}
+
+.leaflet-popup-tip {
+  background: var(--paper) !important;
+  border: 1px solid var(--rule-strong) !important;
+}
+
+.popup-title {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 40;
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.15;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.popup-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.popup-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 3px 0;
+  font-size: 11.5px;
+  border-top: 1px dotted var(--rule);
+}
+
+.popup-row .k { color: var(--muted); }
+.popup-row .v { font-family: var(--font-mono); font-weight: 500; color: var(--ink); }
+
+.popup-score-bar {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+
+.score-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+.score-pill.severe { background: var(--desert-bg); color: var(--desert); }
+.score-pill.high { background: #f0d6bb; color: #8a4422; }
+.score-pill.moderate { background: #e8dcc0; color: #7a5a20; }
+.score-pill.adequate { background: var(--served-bg); color: var(--served); }
+
+/* Refill marker */
+.refill-marker {
+  background: var(--water);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--water), 0 1px 3px rgba(28, 81, 120, 0.4);
+  width: 100%; height: 100%;
+}
+
+/* Candidate marker */
+.candidate-marker {
+  background: var(--gold);
+  border: 1.5px solid var(--gold-deep);
+  transform: rotate(45deg);
+  width: 70%; height: 70%;
+  margin: 15%;
+}
+
+/* Recommended (top-N) marker */
+.recommended-marker {
+  background: var(--gold-deep);
+  border: 2px solid var(--ink);
+  transform: rotate(45deg);
+  width: 80%; height: 80%;
+  margin: 10%;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 2px 6px rgba(154, 117, 34, 0.5);
+}
+
+.recommended-marker.rank-top::after {
+  content: attr(data-rank);
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* Ward label */
+.ward-label {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 144;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+  text-shadow:
+    -1px -1px 0 var(--paper),
+    1px -1px 0 var(--paper),
+    -1px 1px 0 var(--paper),
+    1px 1px 0 var(--paper),
+    0 0 3px var(--paper);
+  pointer-events: none;
+  letter-spacing: -0.01em;
+}
+
+/* ===== RIGHT PANEL: RANKINGS ===== */
+.ranking-list {
+  margin: -4px -4px 0 -4px;
+}
+
+.ranking-item {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  gap: 8px;
+  padding: 9px 8px;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  transition: all 0.12s;
+}
+
+.ranking-item:hover {
+  background: var(--paper-2);
+  border-color: var(--rule);
+}
+
+.ranking-item.selected {
+  background: var(--paper-3);
+  border-color: var(--ink-2);
+}
+
+.ranking-item.in-scenario {
+  background: #f7ecd0;
+  border-color: var(--gold);
+}
+
+.rank-num {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 144;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--water);
+  line-height: 1;
+  text-align: center;
+}
+
+.ranking-item.in-scenario .rank-num { color: var(--gold-deep); }
+
+.rank-info .rank-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.rank-info .rank-meta {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.rank-score {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: right;
+}
+
+.rank-score-bar {
+  height: 2px;
+  width: 38px;
+  background: var(--rule);
+  margin-top: 2px;
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.rank-score-bar-fill {
+  height: 100%;
+  background: var(--water);
+}
+
+.ranking-item.in-scenario .rank-score-bar-fill {
+  background: var(--gold-deep);
+}
+
+/* ===== CANDIDATE DETAIL PANEL ===== */
+.detail-panel {
+  background: var(--paper-2);
+  border-radius: 3px;
+  padding: 14px;
+  margin-top: 8px;
+  border: 1px solid var(--rule-strong);
+}
+
+.detail-title {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 40;
+  font-weight: 500;
+  font-size: 17px;
+  line-height: 1.1;
+  margin-bottom: 3px;
+}
+
+.detail-subtitle {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.detail-score-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.detail-score-cell {
+  background: var(--paper);
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.detail-score-cell .k {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.detail-score-cell .v {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 60;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.detail-rationale {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  line-height: 1.45;
+  padding: 8px 0;
+  border-top: 1px dotted var(--rule-strong);
+}
+
+.detail-rationale em {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--water);
+  font-weight: 500;
+}
+
+/* ===== FOOTER / SCENARIO PANEL ===== */
+footer.scenario-bar {
+  grid-area: footer;
+  background: var(--ink);
+  color: var(--paper);
+  border-top: 1px solid var(--ink-2);
+  padding: 0;
+  display: grid;
+  grid-template-columns: 320px 1fr 360px;
+  min-height: 150px;
+  max-height: 150px;
+}
+
+.scenario-controls {
+  padding: 16px 20px;
+  border-right: 1px solid var(--ink-2);
+}
+
+.scenario-controls h3 {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #aea392;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.scenario-controls h3 .step-num {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 60;
+  font-size: 18px;
+  color: var(--gold);
+  letter-spacing: 0;
+  margin-right: 8px;
+}
+
+.big-slider .slider-label .name { color: #eee4d0; font-size: 11.5px; }
+.big-slider .slider-label .value {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 60;
+  font-size: 24px;
+  color: var(--gold);
+  font-weight: 500;
+}
+
+footer input[type="range"] {
+  background: #38322a;
+}
+footer input[type="range"]::-webkit-slider-thumb { background: var(--gold); border-color: var(--ink); }
+footer input[type="range"]::-moz-range-thumb { background: var(--gold); border-color: var(--ink); }
+
+.run-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 14px;
+  background: var(--gold);
+  color: var(--ink);
+  border: none;
+  border-radius: 3px;
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+}
+.run-btn:hover { background: #e2b862; transform: translateY(-1px); }
+.run-btn:active { transform: translateY(0); }
+
+.scenario-results {
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  align-items: stretch;
+  border-right: 1px solid var(--ink-2);
+}
+
+.result-card {
+  padding: 2px 18px;
+  border-right: 1px solid var(--ink-2);
+}
+
+.result-card:last-child { border-right: none; }
+
+.result-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #aea392;
+  margin-bottom: 4px;
+}
+
+.result-value {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 144;
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.05;
+  color: var(--paper);
+}
+
+.result-delta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  margin-top: 3px;
+}
+.result-delta.positive { color: #a9d88a; }
+.result-delta.negative { color: #e89f80; }
+.result-delta.neutral { color: #aea392; }
+
+.scenario-chart {
+  padding: 12px 14px 8px;
+  position: relative;
+}
+
+.scenario-chart h4 {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #aea392;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+#coverageChart {
+  max-height: 110px;
+  width: 100% !important;
+  height: 110px !important;
+}
+
+/* ===== UTILITIES ===== */
+.muted { color: var(--muted); }
+.mono { font-family: var(--font-mono); }
+.serif { font-family: var(--font-display); }
+
+.empty-state {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  padding: 10px 4px;
+}
+
+.divider-hairline {
+  height: 1px;
+  background: var(--rule);
+  margin: 10px 0;
+}
+
+.section-intro {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.45;
+  margin-bottom: 10px;
+  font-style: italic;
+}
+
+/* Scrollbar */
+.panel::-webkit-scrollbar, .ranking-list::-webkit-scrollbar {
+  width: 6px;
+}
+.panel::-webkit-scrollbar-track { background: transparent; }
+.panel::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+  border-radius: 3px;
+}
+.panel::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* Hex layer hover */
+.hex-polygon {
+  cursor: crosshair;
+  transition: opacity 0.1s;
+}
+
+.hex-polygon:hover {
+  opacity: 0.7;
+}
+
+/* Loading */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 18px;
+  z-index: 9999;
+  transition: opacity 0.4s;
+}
+
+.loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+.loading-overlay .loader-title {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 80;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.loading-overlay .loader-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.loader-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--rule);
+  border-top-color: var(--water);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 1200px) {
+  .app { grid-template-columns: 280px 1fr 300px; }
+  footer.scenario-bar { grid-template-columns: 280px 1fr 300px; }
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader-spinner"></div>
+  <div class="loader-title">Tokyo Refill Infrastructure Decision Tool</div>
+  <div class="loader-sub" id="loaderStatus">INITIALIZING SPATIAL GRID</div>
+</div>
+
+<div class="app">
+
+  <!-- ================= HEADER ================= -->
+  <header class="masthead">
+    <div class="title-block">
+      <div class="eyebrow"><span class="dot"></span>TOKYO 23 WARDS · REFILL INFRASTRUCTURE ANALYSIS · v1.0</div>
+      <h1 class="title">Where should Tokyo's <em>next refill points</em> go?</h1>
+      <div class="subtitle">A decision-support tool for identifying refill deserts and ranking candidate sites to expand coverage, reduce single-use bottle dependence, and target areas where refill access is most needed.</div>
+    </div>
+    <div class="header-metrics">
+      <div class="metric">
+        <div class="metric-label">EXISTING POINTS</div>
+        <div class="metric-value" id="hdrTotal">—</div>
+        <div class="metric-delta" id="hdrTotalSub">mymizu network</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">REFILL DESERTS</div>
+        <div class="metric-value" id="hdrDeserts">—</div>
+        <div class="metric-delta" id="hdrDesertsSub">severe-gap cells</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">UNDERSERVED WARDS</div>
+        <div class="metric-value" id="hdrWards">—</div>
+        <div class="metric-delta" id="hdrWardsSub">below threshold</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">MEAN ACCESS DIST.</div>
+        <div class="metric-value" id="hdrDist">—</div>
+        <div class="metric-delta" id="hdrDistSub">to nearest refill</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= LEFT PANEL ================= -->
+  <aside class="panel left" id="leftPanel">
+
+    <div class="panel-section">
+      <h3>Map Layers<span class="step-num">01</span></h3>
+      <div class="section-intro">Toggle what appears on the map.</div>
+      <div class="layer-row active" data-layer="refill">
+        <span class="layer-check"></span>
+        <span class="layer-swatch refill"></span>
+        <span class="layer-name">Existing refill points</span>
+        <span class="layer-count" id="cnt-refill">0</span>
+      </div>
+      <div class="layer-row active" data-layer="hex">
+        <span class="layer-check"></span>
+        <span class="layer-swatch desert"></span>
+        <span class="layer-name">Refill gap heatmap</span>
+        <span class="layer-count" id="cnt-hex">0</span>
+      </div>
+      <div class="layer-row" data-layer="candidates">
+        <span class="layer-check"></span>
+        <span class="layer-swatch candidate"></span>
+        <span class="layer-name">All candidate sites</span>
+        <span class="layer-count" id="cnt-candidates">0</span>
+      </div>
+      <div class="layer-row active" data-layer="recommended">
+        <span class="layer-check"></span>
+        <span class="layer-swatch recommended"></span>
+        <span class="layer-name">Top recommendations</span>
+        <span class="layer-count" id="cnt-recommended">0</span>
+      </div>
+      <div class="layer-row active" data-layer="wards">
+        <span class="layer-check"></span>
+        <span class="layer-swatch wards"></span>
+        <span class="layer-name">Ward labels</span>
+        <span class="layer-count">23</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h3>Heatmap View<span class="step-num">02</span></h3>
+      <div class="section-intro">Choose what the choropleth visualizes.</div>
+      <div class="tabs" id="viewTabs">
+        <div class="tab active" data-view="gap">Gap</div>
+        <div class="tab" data-view="demand">Demand</div>
+        <div class="tab" data-view="combined">Combined</div>
+      </div>
+      <div class="section-intro" id="viewExplainer" style="margin-top:10px;margin-bottom:0;">
+        <strong>Gap:</strong> distance to the nearest existing refill point. Darker = poorer access.
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h3>Scoring Weights<span class="step-num">03</span></h3>
+      <div class="section-intro">How the tool ranks candidate sites.</div>
+      <div class="slider-row">
+        <div class="slider-label"><span class="name">Refill gap severity</span><span class="value" id="valGap">0.50</span></div>
+        <input type="range" id="wGap" min="0" max="100" value="50" />
+      </div>
+      <div class="slider-row">
+        <div class="slider-label"><span class="name">Local demand</span><span class="value" id="valDemand">0.30</span></div>
+        <input type="range" id="wDemand" min="0" max="100" value="30" />
+      </div>
+      <div class="slider-row">
+        <div class="slider-label"><span class="name">Coverage spacing</span><span class="value" id="valSpace">0.20</span></div>
+        <input type="range" id="wSpace" min="0" max="100" value="20" />
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h3>Candidate Filter<span class="step-num">04</span></h3>
+      <div class="section-intro">Restrict eligible host types.</div>
+      <div class="chips" id="typeFilter">
+        <div class="chip active" data-type="all">All</div>
+        <div class="chip" data-type="station">Stations</div>
+        <div class="chip" data-type="park">Parks</div>
+        <div class="chip" data-type="public">Public</div>
+        <div class="chip" data-type="library">Libraries</div>
+        <div class="chip" data-type="school">Schools</div>
+        <div class="chip" data-type="university">Universities</div>
+        <div class="chip" data-type="commercial">Commercial</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ================= MAP ================= -->
+  <div id="map"></div>
+
+  <div class="map-overlay legend" id="legend">
+    <h4 id="legendTitle">Refill Gap Severity</h4>
+    <div class="legend-gradient">
+      <span>Low</span>
+      <div class="gradient-bar gradient-gap" id="gradBar"></div>
+      <span>Severe</span>
+    </div>
+    <div class="legend-items">
+      <div class="legend-item"><span class="legend-dot refill"></span>Existing refill point (mymizu)</div>
+      <div class="legend-item"><span class="legend-dot candidate"></span>Candidate site</div>
+      <div class="legend-item"><span class="legend-dot recommended"></span>Recommended (top-N)</div>
+    </div>
+  </div>
+
+  <!-- ================= RIGHT PANEL ================= -->
+  <aside class="panel right" id="rightPanel">
+
+    <div class="panel-section">
+      <h3>Recommended Sites<span class="step-num">05</span></h3>
+      <div class="section-intro">Ranked new refill locations. Click for rationale.</div>
+      <div class="ranking-list" id="rankingList"></div>
+    </div>
+
+    <div class="panel-section">
+      <h3>Site Detail<span class="step-num">06</span></h3>
+      <div id="detailContainer">
+        <div class="empty-state">Select a recommendation to see its full decision rationale.</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h3>Underserved Wards<span class="step-num">07</span></h3>
+      <div class="section-intro">Wards ranked by mean refill access distance.</div>
+      <div class="ranking-list" id="wardList"></div>
+    </div>
+
+  </aside>
+
+  <!-- ================= FOOTER: SCENARIO ================= -->
+  <footer class="scenario-bar">
+
+    <div class="scenario-controls">
+      <h3><span class="step-num">08</span>Scenario Simulation</h3>
+      <div class="slider-row big-slider">
+        <div class="slider-label">
+          <span class="name">New refill points to deploy</span>
+          <span class="value" id="valN">10</span>
+        </div>
+        <input type="range" id="nPoints" min="0" max="30" value="10" />
+      </div>
+      <button class="run-btn" id="runScenario">Run Simulation</button>
+    </div>
+
+    <div class="scenario-results">
+      <div class="result-card">
+        <div class="result-label">COVERAGE @ 500 M</div>
+        <div class="result-value" id="resCoverage">—</div>
+        <div class="result-delta neutral" id="resCoverageDelta">baseline</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label">MEAN ACCESS DIST.</div>
+        <div class="result-value" id="resDist">—</div>
+        <div class="result-delta neutral" id="resDistDelta">baseline</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label">DESERTS RESOLVED</div>
+        <div class="result-value" id="resResolved">—</div>
+        <div class="result-delta neutral" id="resResolvedDelta">baseline</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label">HI-DEMAND NEWLY SERVED</div>
+        <div class="result-value" id="resDemand">—</div>
+        <div class="result-delta neutral" id="resDemandDelta">baseline</div>
+      </div>
+    </div>
+
+    <div class="scenario-chart">
+      <h4>Coverage Curve · Before vs After</h4>
+      <canvas id="coverageChart"></canvas>
+    </div>
+
+  </footer>
+
+</div>
+
+<!-- =========================================================
+     APPLICATION SCRIPT
+     ========================================================= -->
+
+<script>
+/* =================================================================
+   TOKYO REFILL INFRASTRUCTURE DECISION TOOL
+   ================================================================= */
+
+/* ---------- DATA LOADING ---------- */
+// Data is loaded asynchronously in init() via fetch()
+let REFILL, CANDS, WARDS, ANCHORS;
+
+/* ---------- APP STATE ---------- */
+const state = {
+  view: 'gap',                    // gap | demand | combined
+  layers: {
+    refill: true,
+    hex: true,
+    candidates: false,
+    recommended: true,
+    wards: true
+  },
+  weights: { gap: 0.5, demand: 0.3, space: 0.2 },
+  typeFilter: 'all',
+  nPoints: 10,
+  selectedCandidateId: null,
+  scenarioRun: true               // auto-run on init
+};
+
+/* ---------- ANALYSIS CONSTANTS ---------- */
+const TOKYO_BBOX   = [139.53, 35.515, 139.92, 35.815];   // [W, S, E, N]
+const HEX_SIDE_KM  = 0.55;                               // ~ 1.1 km across
+const COVERAGE_R   = 0.5;                                // 500 m coverage radius (km)
+const DESERT_THRESH= 800;                                // m; nearest-refill distance above which = desert
+const DEMAND_DECAY = 0.9;                                // km decay scale for anchor influence
+
+/* ---------- GLOBAL MAP OBJECTS ---------- */
+let map;
+let hexGrid = null;
+let hexLayer = null;
+let refillLayer = null;
+let candidatesLayer = null;
+let recommendedLayer = null;
+let wardLabelsLayer = null;
+let scenarioPointsLayer = null;
+let coverageChart = null;
+
+/* =================================================================
+   INITIALISATION
+   ================================================================= */
+function setLoadingStatus(s) {
+  document.getElementById('loaderStatus').textContent = s;
+}
+
+async function init() {
+  // ── Load data from ./data/ (must be served via HTTP; see README for serving instructions) ──
+  try {
+    const statusEl = document.getElementById('loaderStatus');
+    if (statusEl) statusEl.textContent = 'LOADING DATA';
+    const [refillJSON, candsJSON, wardsJSON, anchorsJSON] = await Promise.all([
+      fetch('./data/refill_points.json').then(r => {
+        if (!r.ok) throw new Error(`refill_points.json: ${r.status}`);
+        return r.json();
+      }),
+      fetch('./data/candidate_sites.json').then(r => {
+        if (!r.ok) throw new Error(`candidate_sites.json: ${r.status}`);
+        return r.json();
+      }),
+      fetch('./data/tokyo_wards.json').then(r => {
+        if (!r.ok) throw new Error(`tokyo_wards.json: ${r.status}`);
+        return r.json();
+      }),
+      fetch('./data/demand_anchors.json').then(r => {
+        if (!r.ok) throw new Error(`demand_anchors.json: ${r.status}`);
+        return r.json();
+      }),
+    ]);
+    REFILL  = refillJSON.points;
+    CANDS   = candsJSON.candidates;
+    WARDS   = wardsJSON.wards;
+    ANCHORS = anchorsJSON.anchors;
+  } catch (err) {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+      overlay.innerHTML = `
+        <div style="max-width: 520px; padding: 32px; text-align: left; background: #efeae0; border: 1px solid #b84722; border-radius: 4px;">
+          <div style="font-family: 'Fraunces', serif; font-size: 22px; color: #b84722; margin-bottom: 12px;">Could not load data files</div>
+          <div style="font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; color: #14110c; line-height: 1.5;">
+            <p><strong>Error:</strong> <code>${err.message}</code></p>
+            <p>Browsers block <code>fetch()</code> from <code>file://</code> URLs for security.</p>
+            <p><strong>Fix:</strong> serve the folder over HTTP. In the project root, run:</p>
+            <pre style="background: #14110c; color: #efeae0; padding: 12px; border-radius: 3px; font-family: 'IBM Plex Mono', monospace; font-size: 12px;">python3 -m http.server 8000</pre>
+            <p>Then open <a href="http://localhost:8000" style="color: #1c5178;">http://localhost:8000</a></p>
+            <p style="margin-top: 16px; font-size: 12px; color: #6e6658;">Or deploy to GitHub Pages — see README.md.</p>
+          </div>
+        </div>`;
+    }
+    console.error(err);
+    return;
+  }
+
+  setLoadingStatus('BUILDING MAP CANVAS');
+  initMap();
+
+  setLoadingStatus('GENERATING HEX GRID');
+  await nextFrame();
+  hexGrid = buildHexGrid();
+
+  setLoadingStatus('COMPUTING ACCESS METRICS');
+  await nextFrame();
+  computeHexMetrics(hexGrid, REFILL);
+
+  setLoadingStatus('SCORING CANDIDATE SITES');
+  await nextFrame();
+  scoreAllCandidates();
+
+  setLoadingStatus('RENDERING LAYERS');
+  await nextFrame();
+  renderAll();
+
+  setLoadingStatus('READY');
+  setTimeout(() => {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  }, 220);
+}
+
+function nextFrame() {
+  return new Promise(r => requestAnimationFrame(() => setTimeout(r, 10)));
+}
+
+/* =================================================================
+   MAP SETUP
+   ================================================================= */
+function initMap() {
+  map = L.map('map', {
+    center: [35.682, 139.76],
+    zoom: 12,
+    zoomControl: true,
+    preferCanvas: true,
+    zoomSnap: 0.25
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    subdomains: 'abcd',
+    attribution: '© OpenStreetMap · © CARTO · mymizu refill data · PLATEAU MLIT'
+  }).addTo(map);
+}
+
+/* =================================================================
+   SPATIAL GRID
+   ================================================================= */
+function buildHexGrid() {
+  const grid = turf.hexGrid(TOKYO_BBOX, HEX_SIDE_KM, { units: 'kilometers' });
+
+  // Filter to only hexes whose centroid is within ~15 km of any ward centroid
+  // (rough filter to the Tokyo 23 wards region)
+  const wardPoints = WARDS.map(w => turf.point([w.lng, w.lat]));
+  const filtered = grid.features.filter(hex => {
+    const c = turf.centroid(hex);
+    for (const wp of wardPoints) {
+      if (turf.distance(c, wp, { units: 'kilometers' }) < 4.5) return true;
+    }
+    return false;
+  });
+
+  // Attach centroid + ward attribution + id
+  filtered.forEach((hex, i) => {
+    const c = turf.centroid(hex);
+    hex.properties.id = 'h' + i;
+    hex.properties.centroid = c.geometry.coordinates; // [lng, lat]
+    // Assign to nearest ward
+    let minD = Infinity; let best = null;
+    for (const w of WARDS) {
+      const d = turf.distance(c, turf.point([w.lng, w.lat]), { units: 'kilometers' });
+      if (d < minD) { minD = d; best = w; }
+    }
+    hex.properties.ward = best.name;
+  });
+
+  return { type: 'FeatureCollection', features: filtered };
+}
+
+function computeHexMetrics(grid, refillPoints) {
+  const refillFC = turf.featureCollection(refillPoints.map(r => turf.point([r.lng, r.lat], { id: r.id })));
+
+  for (const hex of grid.features) {
+    const c = turf.point(hex.properties.centroid);
+
+    // ACCESS: distance to nearest refill (meters)
+    let nearestD = Infinity;
+    for (const f of refillFC.features) {
+      const d = turf.distance(c, f, { units: 'kilometers' }) * 1000;
+      if (d < nearestD) nearestD = d;
+    }
+    hex.properties.nearestRefill_m = nearestD;
+
+    // GAP SCORE (0-100) — higher = worse access
+    hex.properties.gapScore = Math.min(100, nearestD / 15);
+
+    // DEMAND SCORE: sum of anchor weights × exp(-dist/decay)
+    let demand = 0;
+    for (const a of ANCHORS) {
+      const d = turf.distance(c, turf.point([a.lng, a.lat]), { units: 'kilometers' });
+      demand += a.weight * Math.exp(-d / DEMAND_DECAY);
+    }
+    hex.properties.demandRaw = demand;
+  }
+
+  // Normalise demand to 0-100
+  const demands = grid.features.map(h => h.properties.demandRaw);
+  const maxD = Math.max(...demands);
+  const minD = Math.min(...demands);
+  for (const h of grid.features) {
+    h.properties.demandScore = 100 * (h.properties.demandRaw - minD) / (maxD - minD);
+    // Combined: geometric-ish blend — penalises low demand even if gap is high
+    h.properties.combinedScore =
+      (h.properties.gapScore * 0.6 + h.properties.demandScore * 0.4);
+    h.properties.isDesert = h.properties.nearestRefill_m > DESERT_THRESH;
+  }
+}
+
+/* =================================================================
+   CANDIDATE SCORING
+   ================================================================= */
+function candidateGapScore(cand) {
+  // Distance to nearest existing refill point (m) → 0–100 score
+  const pt = turf.point([cand.lng, cand.lat]);
+  let nearest = Infinity;
+  for (const r of REFILL) {
+    const d = turf.distance(pt, turf.point([r.lng, r.lat]), { units: 'kilometers' }) * 1000;
+    if (d < nearest) nearest = d;
+  }
+  cand._nearestRefill_m = nearest;
+  return Math.min(100, nearest / 12);
+}
+
+function candidateDemandScore(cand) {
+  const pt = turf.point([cand.lng, cand.lat]);
+  let demand = 0;
+  for (const a of ANCHORS) {
+    const d = turf.distance(pt, turf.point([a.lng, a.lat]), { units: 'kilometers' });
+    demand += a.weight * Math.exp(-d / DEMAND_DECAY);
+  }
+  return demand;
+}
+
+function scoreAllCandidates() {
+  // Gap + demand (demand needs normalisation across all candidates)
+  const rawDemand = [];
+  for (const c of CANDS) {
+    c._gapScore = candidateGapScore(c);
+    c._demandRaw = candidateDemandScore(c);
+    rawDemand.push(c._demandRaw);
+  }
+  const maxD = Math.max(...rawDemand), minD = Math.min(...rawDemand);
+  for (const c of CANDS) {
+    c._demandScore = 100 * (c._demandRaw - minD) / (maxD - minD);
+  }
+}
+
+/**
+ * Compute spacing score against an evolving set of "already deployed" points.
+ * Used during rolling selection for scenario simulation.
+ */
+function candidateSpacingScore(cand, deployedPts) {
+  if (!deployedPts.length) return 100;
+  const pt = turf.point([cand.lng, cand.lat]);
+  let nearest = Infinity;
+  for (const d of deployedPts) {
+    const dd = turf.distance(pt, turf.point([d.lng, d.lat]), { units: 'kilometers' }) * 1000;
+    if (dd < nearest) nearest = dd;
+  }
+  return Math.min(100, nearest / 15);
+}
+
+/**
+ * Rank candidates using greedy selection with spacing penalty.
+ * Returns candidates in priority order with their final composite scores.
+ */
+function rankCandidates(typeFilter = 'all') {
+  const { gap, demand, space } = state.weights;
+  const total = gap + demand + space || 1;
+  const w = { g: gap / total, d: demand / total, s: space / total };
+
+  let pool = CANDS.slice();
+  if (typeFilter !== 'all') pool = pool.filter(c => c.type === typeFilter);
+
+  const deployed = [];   // already-selected candidates (growing)
+  const ordered  = [];
+
+  while (pool.length) {
+    let bestIdx = 0, bestScore = -1, bestParts = null;
+    for (let i = 0; i < pool.length; i++) {
+      const c = pool[i];
+      const ss = candidateSpacingScore(c, deployed);
+      const composite = w.g * c._gapScore + w.d * c._demandScore + w.s * ss;
+      if (composite > bestScore) {
+        bestScore = composite; bestIdx = i; bestParts = { g: c._gapScore, d: c._demandScore, s: ss };
+      }
+    }
+    const picked = pool.splice(bestIdx, 1)[0];
+    picked._spacingScore = bestParts.s;
+    picked._finalScore = bestScore;
+    picked._rank = ordered.length + 1;
+    ordered.push(picked);
+    deployed.push(picked);
+  }
+
+  return ordered;
+}
+
+/* =================================================================
+   SCENARIO SIMULATION
+   ================================================================= */
+function runScenario() {
+  const ordered = rankCandidates(state.typeFilter);
+  const topN    = ordered.slice(0, state.nPoints);
+
+  // BEFORE = baseline hex metrics (already in hex.properties.nearestRefill_m)
+  // AFTER = recompute nearest-refill using REFILL ∪ topN
+  const combined = REFILL.concat(topN.map(c => ({ lat: c.lat, lng: c.lng, _candidate: true })));
+
+  let beforeCovered = 0, afterCovered = 0;
+  let beforeSumDist = 0, afterSumDist = 0;
+  let beforeDeserts = 0, afterDeserts = 0;
+  let newHighDemandServed = 0;
+  const nHex = hexGrid.features.length;
+
+  const DEMAND_PCT = 65;   // above this percentile = "high demand"
+  const demandCutoff = percentile(hexGrid.features.map(h => h.properties.demandScore), DEMAND_PCT);
+
+  for (const hex of hexGrid.features) {
+    const c = turf.point(hex.properties.centroid);
+    const before_m = hex.properties.nearestRefill_m;
+    // after
+    let after_m = before_m;
+    for (const p of topN) {
+      const d = turf.distance(c, turf.point([p.lng, p.lat]), { units: 'kilometers' }) * 1000;
+      if (d < after_m) after_m = d;
+    }
+    hex.properties.afterNearest_m = after_m;
+    hex.properties.afterGapScore = Math.min(100, after_m / 15);
+
+    if (before_m <= COVERAGE_R * 1000) beforeCovered++;
+    if (after_m  <= COVERAGE_R * 1000) afterCovered++;
+    beforeSumDist += before_m;
+    afterSumDist  += after_m;
+    if (before_m > DESERT_THRESH) beforeDeserts++;
+    if (after_m  > DESERT_THRESH) afterDeserts++;
+
+    // High-demand newly served
+    if (hex.properties.demandScore >= demandCutoff) {
+      if (before_m > COVERAGE_R * 1000 && after_m <= COVERAGE_R * 1000) {
+        newHighDemandServed++;
+      }
+    }
+  }
+
+  const result = {
+    topN,
+    beforeCoverage: 100 * beforeCovered / nHex,
+    afterCoverage:  100 * afterCovered / nHex,
+    beforeMeanDist: beforeSumDist / nHex,
+    afterMeanDist:  afterSumDist / nHex,
+    beforeDeserts,
+    afterDeserts,
+    desertsResolved: beforeDeserts - afterDeserts,
+    newHighDemandServed,
+    nHex
+  };
+
+  state._lastScenario = result;
+  return result;
+}
+
+function percentile(arr, p) {
+  const sorted = arr.slice().sort((a, b) => a - b);
+  const i = Math.floor((p / 100) * sorted.length);
+  return sorted[Math.min(i, sorted.length - 1)];
+}
+
+/* =================================================================
+   RENDERING
+   ================================================================= */
+
+function colorForHex(hex, view) {
+  let v;
+  if (view === 'gap') v = hex.properties.gapScore;
+  else if (view === 'demand') v = hex.properties.demandScore;
+  else v = hex.properties.combinedScore;
+  v = Math.max(0, Math.min(100, v)) / 100;
+
+  if (view === 'gap')       return interpolate(v, ['#f2e7d6', '#efd4b5', '#e2a878', '#c77248', '#b84722']);
+  if (view === 'demand')    return interpolate(v, ['#efeae0', '#c9d3dc', '#8ea7b8', '#476e8c', '#1c5178']);
+  /* combined */            return interpolate(v, ['#efeae0', '#dec89a', '#d4a85a', '#b8802a', '#8a4722']);
+}
+
+function interpolate(t, stops) {
+  const n = stops.length - 1;
+  const pos = t * n;
+  const i = Math.floor(pos);
+  const f = pos - i;
+  if (i >= n) return stops[n];
+  return mixHex(stops[i], stops[i + 1], f);
+}
+
+function mixHex(a, b, t) {
+  const ra = parseInt(a.slice(1,3),16), ga = parseInt(a.slice(3,5),16), ba = parseInt(a.slice(5,7),16);
+  const rb = parseInt(b.slice(1,3),16), gb = parseInt(b.slice(3,5),16), bb = parseInt(b.slice(5,7),16);
+  const r = Math.round(ra + (rb - ra) * t);
+  const g = Math.round(ga + (gb - ga) * t);
+  const bl = Math.round(ba + (bb - ba) * t);
+  return `rgb(${r},${g},${bl})`;
+}
+
+function renderHexLayer() {
+  if (hexLayer) { map.removeLayer(hexLayer); hexLayer = null; }
+  if (!state.layers.hex) return;
+
+  hexLayer = L.geoJSON(hexGrid, {
+    style: feat => ({
+      color: '#00000010',
+      weight: 0.4,
+      fillColor: colorForHex(feat, state.view),
+      fillOpacity: 0.62,
+      className: 'hex-polygon'
+    }),
+    onEachFeature: (feat, layer) => {
+      const p = feat.properties;
+      layer.bindPopup(`
+        <div class="popup-title">${p.ward} · hex ${p.id}</div>
+        <div class="popup-meta">Spatial analysis cell</div>
+        <div class="popup-row"><span class="k">Nearest refill</span><span class="v">${Math.round(p.nearestRefill_m)} m</span></div>
+        <div class="popup-row"><span class="k">Gap score</span><span class="v">${Math.round(p.gapScore)}/100</span></div>
+        <div class="popup-row"><span class="k">Demand score</span><span class="v">${Math.round(p.demandScore)}/100</span></div>
+        <div class="popup-score-bar">
+          <span class="score-pill ${gapPillClass(p.nearestRefill_m)}">${gapPillLabel(p.nearestRefill_m)}</span>
+        </div>
+      `);
+    }
+  }).addTo(map);
+}
+
+function gapPillLabel(m) {
+  if (m > 1200) return 'SEVERE REFILL DESERT';
+  if (m > 800)  return 'UNDERSERVED';
+  if (m > 400)  return 'MODERATE ACCESS';
+  return 'ADEQUATE ACCESS';
+}
+function gapPillClass(m) {
+  if (m > 1200) return 'severe';
+  if (m > 800)  return 'high';
+  if (m > 400)  return 'moderate';
+  return 'adequate';
+}
+
+function renderRefillLayer() {
+  if (refillLayer) { map.removeLayer(refillLayer); refillLayer = null; }
+  if (!state.layers.refill) return;
+
+  refillLayer = L.layerGroup();
+  for (const r of REFILL) {
+    const icon = L.divIcon({
+      html: `<div class="refill-marker"></div>`,
+      iconSize: [10, 10],
+      className: 'refill-icon'
+    });
+    const m = L.marker([r.lat, r.lng], { icon });
+    m.bindPopup(`
+      <div class="popup-title">${r.name}</div>
+      <div class="popup-meta">${r.ward} · ${labelType(r.type)}</div>
+      <div class="popup-row"><span class="k">Source</span><span class="v">mymizu network</span></div>
+      <div class="popup-row"><span class="k">Coords</span><span class="v">${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</span></div>
+    `);
+    refillLayer.addLayer(m);
+  }
+  refillLayer.addTo(map);
+}
+
+function renderCandidatesLayer() {
+  if (candidatesLayer) { map.removeLayer(candidatesLayer); candidatesLayer = null; }
+  if (!state.layers.candidates) return;
+
+  const ordered = rankCandidates(state.typeFilter);
+  const topSet = new Set(ordered.slice(0, state.nPoints).map(c => c.id));
+
+  candidatesLayer = L.layerGroup();
+  for (const c of CANDS) {
+    if (state.typeFilter !== 'all' && c.type !== state.typeFilter) continue;
+    if (topSet.has(c.id)) continue; // skip top-N, rendered by recommendedLayer
+    const icon = L.divIcon({
+      html: `<div class="candidate-marker"></div>`,
+      iconSize: [10, 10],
+      className: 'candidate-icon'
+    });
+    const m = L.marker([c.lat, c.lng], { icon, opacity: 0.85 });
+    m.bindPopup(buildCandidatePopup(c));
+    m.on('click', () => selectCandidate(c.id));
+    candidatesLayer.addLayer(m);
+  }
+  candidatesLayer.addTo(map);
+}
+
+function renderRecommendedLayer() {
+  if (recommendedLayer) { map.removeLayer(recommendedLayer); recommendedLayer = null; }
+  if (!state.layers.recommended) return;
+
+  const ordered = rankCandidates(state.typeFilter);
+  const topN = ordered.slice(0, state.nPoints);
+
+  recommendedLayer = L.layerGroup();
+  for (let i = 0; i < topN.length; i++) {
+    const c = topN[i];
+    const icon = L.divIcon({
+      html: `<div class="recommended-marker rank-top" data-rank="${i+1}"></div>`,
+      iconSize: [14, 14],
+      className: 'recommended-icon'
+    });
+    const m = L.marker([c.lat, c.lng], { icon, zIndexOffset: 500 });
+    m.bindPopup(buildCandidatePopup(c, i + 1));
+    m.on('click', () => selectCandidate(c.id));
+    recommendedLayer.addLayer(m);
+  }
+  recommendedLayer.addTo(map);
+}
+
+function buildCandidatePopup(c, rank) {
+  const rationale = buildRationale(c);
+  return `
+    <div class="popup-title">${rank ? '#' + rank + ' · ' : ''}${c.name}</div>
+    <div class="popup-meta">${c.ward} · ${labelType(c.type)}</div>
+    <div class="popup-row"><span class="k">Gap</span><span class="v">${Math.round(c._gapScore)}/100</span></div>
+    <div class="popup-row"><span class="k">Demand</span><span class="v">${Math.round(c._demandScore)}/100</span></div>
+    <div class="popup-row"><span class="k">Final score</span><span class="v">${Math.round(c._finalScore)}/100</span></div>
+    <div class="popup-row"><span class="k">Nearest refill</span><span class="v">${Math.round(c._nearestRefill_m)} m</span></div>
+    <div class="popup-score-bar" style="font-size:11px;color:var(--muted);font-style:italic;">${rationale}</div>
+  `;
+}
+
+function buildRationale(c) {
+  const parts = [];
+  if (c._gapScore > 70) parts.push(`sits inside a <em>refill desert</em>`);
+  else if (c._gapScore > 45) parts.push(`sits in an underserved pocket`);
+  else parts.push(`near existing coverage`);
+  if (c._demandScore > 70) parts.push(`with <em>very high local activity</em>`);
+  else if (c._demandScore > 40) parts.push(`with moderate local activity`);
+  else parts.push(`in a quieter district`);
+  parts.push(`nearest refill is ${Math.round(c._nearestRefill_m)} m away`);
+  return `Recommended because it ${parts.join(', ')}.`;
+}
+
+function labelType(t) {
+  const map = {
+    public:'Public Facility', park:'Park', cafe:'Café', retail:'Retail',
+    office:'Office', hotel:'Hotel', station:'Station', university:'University',
+    library:'Library', school:'School', commercial:'Commercial'
+  };
+  return map[t] || t;
+}
+
+function renderWardLabels() {
+  if (wardLabelsLayer) { map.removeLayer(wardLabelsLayer); wardLabelsLayer = null; }
+  if (!state.layers.wards) return;
+
+  wardLabelsLayer = L.layerGroup();
+  for (const w of WARDS) {
+    const icon = L.divIcon({
+      html: `<div class="ward-label">${w.name}</div>`,
+      iconSize: [80, 14],
+      className: 'ward-label-icon',
+      iconAnchor: [40, 7]
+    });
+    const m = L.marker([w.lat, w.lng], { icon, interactive: false, zIndexOffset: -100 });
+    wardLabelsLayer.addLayer(m);
+  }
+  wardLabelsLayer.addTo(map);
+}
+
+/* =================================================================
+   SIDE PANEL RENDERING
+   ================================================================= */
+function renderRankingList() {
+  const el = document.getElementById('rankingList');
+  const ordered = rankCandidates(state.typeFilter);
+  const topIds = new Set(ordered.slice(0, state.nPoints).map(c => c.id));
+
+  el.innerHTML = '';
+  const topShown = Math.min(15, ordered.length);
+  for (let i = 0; i < topShown; i++) {
+    const c = ordered[i];
+    const isInScenario = topIds.has(c.id);
+    const selected = c.id === state.selectedCandidateId;
+    const row = document.createElement('div');
+    row.className = 'ranking-item' + (isInScenario ? ' in-scenario' : '') + (selected ? ' selected' : '');
+    row.innerHTML = `
+      <div class="rank-num">${i + 1}</div>
+      <div class="rank-info">
+        <div class="rank-name">${c.name}</div>
+        <div class="rank-meta">${c.ward} · ${labelType(c.type).toUpperCase()}</div>
+      </div>
+      <div>
+        <div class="rank-score">${Math.round(c._finalScore)}</div>
+        <div class="rank-score-bar"><div class="rank-score-bar-fill" style="width:${c._finalScore}%"></div></div>
+      </div>
+    `;
+    row.addEventListener('click', () => {
+      selectCandidate(c.id);
+      map.flyTo([c.lat, c.lng], 15, { duration: 0.6 });
+    });
+    el.appendChild(row);
+  }
+
+  document.getElementById('cnt-candidates').textContent = CANDS.length;
+  document.getElementById('cnt-recommended').textContent = Math.min(state.nPoints, ordered.length);
+}
+
+function renderWardList() {
+  const el = document.getElementById('wardList');
+  // Compute mean nearest-refill distance per ward from hex grid
+  const wardAgg = {};
+  for (const w of WARDS) wardAgg[w.name] = { sum: 0, n: 0, deserts: 0 };
+  for (const h of hexGrid.features) {
+    const w = h.properties.ward;
+    if (!wardAgg[w]) continue;
+    wardAgg[w].sum += h.properties.nearestRefill_m;
+    wardAgg[w].n += 1;
+    if (h.properties.nearestRefill_m > DESERT_THRESH) wardAgg[w].deserts += 1;
+  }
+  const rows = WARDS.map(w => ({
+    name: w.name,
+    pop: w.pop,
+    mean: wardAgg[w.name].n ? wardAgg[w.name].sum / wardAgg[w.name].n : 0,
+    deserts: wardAgg[w.name].deserts
+  })).sort((a, b) => b.mean - a.mean).slice(0, 10);
+
+  el.innerHTML = '';
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const row = document.createElement('div');
+    row.className = 'ranking-item';
+    row.innerHTML = `
+      <div class="rank-num" style="color:var(--desert);">${i + 1}</div>
+      <div class="rank-info">
+        <div class="rank-name">${r.name}</div>
+        <div class="rank-meta">Pop ${(r.pop/1000).toFixed(0)}k · ${r.deserts} desert cells</div>
+      </div>
+      <div>
+        <div class="rank-score">${Math.round(r.mean)}m</div>
+        <div class="rank-score-bar"><div class="rank-score-bar-fill" style="width:${Math.min(100, r.mean/15)}%;background:var(--desert);"></div></div>
+      </div>
+    `;
+    row.addEventListener('click', () => {
+      const w = WARDS.find(x => x.name === r.name);
+      if (w) map.flyTo([w.lat, w.lng], 13.5, { duration: 0.6 });
+    });
+    el.appendChild(row);
+  }
+}
+
+function renderDetailPanel() {
+  const el = document.getElementById('detailContainer');
+  const id = state.selectedCandidateId;
+  if (!id) {
+    el.innerHTML = `<div class="empty-state">Select a recommendation to see its full decision rationale.</div>`;
+    return;
+  }
+  const c = CANDS.find(x => x.id === id);
+  if (!c) return;
+  const ordered = rankCandidates(state.typeFilter);
+  const rankInfo = ordered.find(x => x.id === id);
+  const rank = rankInfo ? rankInfo._rank : '—';
+  const inScenario = rank !== '—' && rank <= state.nPoints;
+
+  el.innerHTML = `
+    <div class="detail-panel">
+      <div class="detail-title">#${rank} · ${c.name}</div>
+      <div class="detail-subtitle">${c.ward} · ${labelType(c.type)} · ${inScenario ? 'IN SCENARIO' : 'BACKUP'}</div>
+      <div class="detail-score-grid">
+        <div class="detail-score-cell"><div class="k">GAP</div><div class="v">${Math.round(c._gapScore)}</div></div>
+        <div class="detail-score-cell"><div class="k">DEMAND</div><div class="v">${Math.round(c._demandScore)}</div></div>
+        <div class="detail-score-cell"><div class="k">SPACING</div><div class="v">${Math.round(rankInfo._spacingScore || 0)}</div></div>
+      </div>
+      <div class="detail-rationale">${buildRationale(c)} Nearest existing refill point is <strong>${Math.round(c._nearestRefill_m)} m</strong> away, and the composite decision score is <strong>${Math.round(rankInfo._finalScore)}/100</strong>.</div>
+    </div>
+  `;
+}
+
+function selectCandidate(id) {
+  state.selectedCandidateId = id;
+  renderRankingList();
+  renderDetailPanel();
+}
+
+/* =================================================================
+   HEADER / SUMMARY METRICS
+   ================================================================= */
+function updateHeaderMetrics() {
+  document.getElementById('hdrTotal').textContent = REFILL.length;
+
+  const deserts = hexGrid.features.filter(h => h.properties.isDesert).length;
+  document.getElementById('hdrDeserts').textContent = deserts;
+
+  // Wards where mean access > DESERT_THRESH are "underserved"
+  const wardAgg = {};
+  for (const w of WARDS) wardAgg[w.name] = { sum: 0, n: 0 };
+  for (const h of hexGrid.features) {
+    const w = h.properties.ward;
+    if (!wardAgg[w]) continue;
+    wardAgg[w].sum += h.properties.nearestRefill_m;
+    wardAgg[w].n += 1;
+  }
+  const underserved = Object.values(wardAgg).filter(a => a.n > 0 && a.sum / a.n > DESERT_THRESH).length;
+  document.getElementById('hdrWards').textContent = underserved + ' / 23';
+
+  const allDist = hexGrid.features.map(h => h.properties.nearestRefill_m);
+  const meanDist = allDist.reduce((a, b) => a + b, 0) / allDist.length;
+  document.getElementById('hdrDist').textContent = Math.round(meanDist) + 'm';
+
+  document.getElementById('cnt-refill').textContent = REFILL.length;
+  document.getElementById('cnt-hex').textContent = hexGrid.features.length;
+}
+
+/* =================================================================
+   SCENARIO RESULTS + CHART
+   ================================================================= */
+function renderScenarioResults(res) {
+  const fmt = n => n.toLocaleString(undefined, { maximumFractionDigits: 1 });
+
+  document.getElementById('resCoverage').textContent = fmt(res.afterCoverage) + '%';
+  const dCov = res.afterCoverage - res.beforeCoverage;
+  const elDC = document.getElementById('resCoverageDelta');
+  elDC.textContent = (dCov >= 0 ? '+' : '') + fmt(dCov) + ' pp vs baseline';
+  elDC.className = 'result-delta ' + (dCov > 0.05 ? 'positive' : dCov < -0.05 ? 'negative' : 'neutral');
+
+  document.getElementById('resDist').textContent = Math.round(res.afterMeanDist) + 'm';
+  const dDist = res.afterMeanDist - res.beforeMeanDist;
+  const elDD = document.getElementById('resDistDelta');
+  elDD.textContent = (dDist > 0 ? '+' : '') + Math.round(dDist) + 'm vs baseline';
+  elDD.className = 'result-delta ' + (dDist < -1 ? 'positive' : dDist > 1 ? 'negative' : 'neutral');
+
+  document.getElementById('resResolved').textContent = res.desertsResolved;
+  document.getElementById('resResolvedDelta').textContent =
+    `${res.afterDeserts} still remain · was ${res.beforeDeserts}`;
+  document.getElementById('resResolvedDelta').className = 'result-delta ' +
+    (res.desertsResolved > 0 ? 'positive' : 'neutral');
+
+  document.getElementById('resDemand').textContent = res.newHighDemandServed;
+  document.getElementById('resDemandDelta').textContent = 'high-activity hexes gained 500m coverage';
+  document.getElementById('resDemandDelta').className = 'result-delta ' +
+    (res.newHighDemandServed > 0 ? 'positive' : 'neutral');
+
+  renderCoverageChart(res);
+}
+
+function renderCoverageChart(res) {
+  // Coverage curve: % of hexes within X meters, for X in 250..2000
+  const xs = [];
+  for (let d = 200; d <= 2000; d += 100) xs.push(d);
+  const beforeY = xs.map(d => 100 * hexGrid.features.filter(h => h.properties.nearestRefill_m <= d).length / hexGrid.features.length);
+  const afterY  = xs.map(d => 100 * hexGrid.features.filter(h => h.properties.afterNearest_m    <= d).length / hexGrid.features.length);
+
+  if (coverageChart) coverageChart.destroy();
+  const ctx = document.getElementById('coverageChart').getContext('2d');
+  coverageChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: xs.map(x => x + 'm'),
+      datasets: [
+        { label: 'Before', data: beforeY, borderColor: '#aea392', backgroundColor: 'rgba(174,163,146,0.15)', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: true },
+        { label: 'After',  data: afterY,  borderColor: '#c89b3c', backgroundColor: 'rgba(200,155,60,0.25)', borderWidth: 2,   pointRadius: 0, tension: 0.3, fill: true }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 500 },
+      plugins: {
+        legend: {
+          display: true,
+          labels: {
+            color: '#eee4d0',
+            font: { family: "'IBM Plex Mono', monospace", size: 9 },
+            boxWidth: 10, boxHeight: 2, padding: 10, usePointStyle: false
+          },
+          align: 'end',
+          position: 'top'
+        },
+        tooltip: {
+          backgroundColor: '#efeae0',
+          titleColor: '#14110c',
+          bodyColor: '#14110c',
+          borderColor: '#a89f8b',
+          borderWidth: 1,
+          titleFont: { family: "'IBM Plex Mono', monospace", size: 10 },
+          bodyFont:  { family: "'IBM Plex Sans', sans-serif", size: 11 },
+          callbacks: {
+            title: items => 'Within ' + items[0].label,
+            label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '% of hexes covered'
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#aea392', font: { family: "'IBM Plex Mono', monospace", size: 8 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 },
+          grid: { color: '#38322a' },
+          title: { display: false }
+        },
+        y: {
+          min: 0, max: 100,
+          ticks: { color: '#aea392', font: { family: "'IBM Plex Mono', monospace", size: 8 }, callback: v => v + '%' },
+          grid: { color: '#38322a' }
+        }
+      }
+    }
+  });
+}
+
+/* =================================================================
+   LEGEND
+   ================================================================= */
+function updateLegend() {
+  const titles = {
+    gap: 'Refill Gap Severity',
+    demand: 'Demand Intensity',
+    combined: 'Combined Priority'
+  };
+  const classes = { gap: 'gradient-gap', demand: 'gradient-demand', combined: 'gradient-combined' };
+  document.getElementById('legendTitle').textContent = titles[state.view];
+  const bar = document.getElementById('gradBar');
+  bar.className = 'gradient-bar ' + classes[state.view];
+}
+
+/* =================================================================
+   EVENT WIRING
+   ================================================================= */
+function wireLayerToggles() {
+  document.querySelectorAll('.layer-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const key = row.dataset.layer;
+      state.layers[key] = !state.layers[key];
+      row.classList.toggle('active', state.layers[key]);
+      renderMapLayers();
+    });
+  });
+}
+
+function wireViewTabs() {
+  document.querySelectorAll('#viewTabs .tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('#viewTabs .tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      state.view = t.dataset.view;
+      const explainer = document.getElementById('viewExplainer');
+      if (state.view === 'gap') explainer.innerHTML = '<strong>Gap:</strong> distance to the nearest existing refill point. Darker = poorer access.';
+      if (state.view === 'demand') explainer.innerHTML = '<strong>Demand:</strong> proximity-weighted activity score from major stations and anchors.';
+      if (state.view === 'combined') explainer.innerHTML = '<strong>Combined:</strong> priority = poor access × high activity. Darkest cells are where a refill point would matter most.';
+      renderHexLayer();
+      updateLegend();
+    });
+  });
+}
+
+function wireWeightSliders() {
+  const sync = () => {
+    const g = +document.getElementById('wGap').value;
+    const d = +document.getElementById('wDemand').value;
+    const s = +document.getElementById('wSpace').value;
+    const total = (g + d + s) || 1;
+    state.weights.gap = g / total;
+    state.weights.demand = d / total;
+    state.weights.space = s / total;
+    document.getElementById('valGap').textContent = state.weights.gap.toFixed(2);
+    document.getElementById('valDemand').textContent = state.weights.demand.toFixed(2);
+    document.getElementById('valSpace').textContent = state.weights.space.toFixed(2);
+    // Recompute rankings + update
+    renderRankingList();
+    renderCandidatesLayer();
+    renderRecommendedLayer();
+    renderDetailPanel();
+  };
+  document.getElementById('wGap').addEventListener('input', sync);
+  document.getElementById('wDemand').addEventListener('input', sync);
+  document.getElementById('wSpace').addEventListener('input', sync);
+}
+
+function wireFilterChips() {
+  document.querySelectorAll('#typeFilter .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#typeFilter .chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.typeFilter = chip.dataset.type;
+      state.selectedCandidateId = null;
+      renderRankingList();
+      renderCandidatesLayer();
+      renderRecommendedLayer();
+      renderDetailPanel();
+    });
+  });
+}
+
+function wireScenarioSlider() {
+  const sl = document.getElementById('nPoints');
+  sl.addEventListener('input', () => {
+    state.nPoints = +sl.value;
+    document.getElementById('valN').textContent = state.nPoints;
+  });
+}
+
+function wireRunButton() {
+  document.getElementById('runScenario').addEventListener('click', () => {
+    const res = runScenario();
+    renderScenarioResults(res);
+    renderRankingList();
+    renderCandidatesLayer();
+    renderRecommendedLayer();
+    renderDetailPanel();
+    flashRunButton();
+  });
+}
+
+function flashRunButton() {
+  const btn = document.getElementById('runScenario');
+  btn.textContent = '✓ Simulation Complete';
+  btn.style.background = '#a9d88a';
+  setTimeout(() => {
+    btn.textContent = 'Run Simulation';
+    btn.style.background = '';
+  }, 1400);
+}
+
+/* =================================================================
+   RENDER ORCHESTRATION
+   ================================================================= */
+function renderMapLayers() {
+  renderHexLayer();
+  renderRefillLayer();
+  renderCandidatesLayer();
+  renderRecommendedLayer();
+  renderWardLabels();
+}
+
+function renderAll() {
+  renderMapLayers();
+  renderRankingList();
+  renderWardList();
+  renderDetailPanel();
+  updateHeaderMetrics();
+  updateLegend();
+
+  wireLayerToggles();
+  wireViewTabs();
+  wireWeightSliders();
+  wireFilterChips();
+  wireScenarioSlider();
+  wireRunButton();
+
+  // auto-run initial scenario
+  const res = runScenario();
+  renderScenarioResults(res);
+
+  // Sync layer row visual state with state object
+  document.querySelectorAll('.layer-row').forEach(row => {
+    const key = row.dataset.layer;
+    row.classList.toggle('active', !!state.layers[key]);
+  });
+}
+
+/* =================================================================
+   START
+   ================================================================= */
+window.addEventListener('load', init);
+</script>
+
+</body>
+</html>

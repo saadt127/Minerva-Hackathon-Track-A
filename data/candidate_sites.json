@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "source": "Curated candidate pool derived from OpenStreetMap amenity data + PLATEAU building use + MEXT school registry",
+    "description": "Potential new refill point locations across Tokyo 23 wards. Each candidate is a plausible host site (station, school, university, library, park, ward office, community center, or commercial anchor) where a refill point could realistically be installed or partnered.",
+    "count": 64
+  },
+  "candidates": [
+    {"id":"c001","name":"Shinjuku Gyoen South Gate","type":"park","ward":"Shinjuku","lat":35.6810,"lng":139.7115},
+    {"id":"c002","name":"Nishi-Shinjuku Square","type":"public","ward":"Shinjuku","lat":35.6955,"lng":139.6850},
+    {"id":"c003","name":"Okubo Station Concourse","type":"station","ward":"Shinjuku","lat":35.7012,"lng":139.6996},
+    {"id":"c004","name":"Waseda Main Library","type":"university","ward":"Shinjuku","lat":35.7089,"lng":139.7190},
+    {"id":"c005","name":"Yotsuya Station East","type":"station","ward":"Shinjuku","lat":35.6860,"lng":139.7302},
+
+    {"id":"c006","name":"Meguro Station West Plaza","type":"station","ward":"Shinagawa","lat":35.6336,"lng":139.7155},
+    {"id":"c007","name":"Gotanda Station East","type":"station","ward":"Shinagawa","lat":35.6264,"lng":139.7235},
+    {"id":"c008","name":"Tennozu Central Tower Atrium","type":"commercial","ward":"Shinagawa","lat":35.6221,"lng":139.7490},
+    {"id":"c009","name":"Oimachi Atre Deck","type":"commercial","ward":"Shinagawa","lat":35.6070,"lng":139.7318},
+
+    {"id":"c010","name":"Ota Ward Community Hub","type":"public","ward":"Ota","lat":35.5620,"lng":139.7161},
+    {"id":"c011","name":"Omori Station Central","type":"station","ward":"Ota","lat":35.5880,"lng":139.7280},
+    {"id":"c012","name":"Denenchofu Station","type":"station","ward":"Ota","lat":35.5953,"lng":139.6688},
+    {"id":"c013","name":"Heiwajima Library","type":"library","ward":"Ota","lat":35.5870,"lng":139.7440},
+    {"id":"c014","name":"Kamata Public High School","type":"school","ward":"Ota","lat":35.5657,"lng":139.7182},
+
+    {"id":"c015","name":"Setagaya Ward Central Library","type":"library","ward":"Setagaya","lat":35.6448,"lng":139.6520},
+    {"id":"c016","name":"Komazawa Olympic Park","type":"park","ward":"Setagaya","lat":35.6255,"lng":139.6617},
+    {"id":"c017","name":"Yoga Station Community","type":"station","ward":"Setagaya","lat":35.6200,"lng":139.6378},
+    {"id":"c018","name":"Chitose-Karasuyama Station","type":"station","ward":"Setagaya","lat":35.6650,"lng":139.6017},
+    {"id":"c019","name":"Kyodo Station Plaza","type":"station","ward":"Setagaya","lat":35.6608,"lng":139.6359},
+    {"id":"c020","name":"Showa Women's University","type":"university","ward":"Setagaya","lat":35.6402,"lng":139.6789},
+
+    {"id":"c021","name":"Suginami Ward Office","type":"public","ward":"Suginami","lat":35.6998,"lng":139.6364},
+    {"id":"c022","name":"Asagaya Station South","type":"station","ward":"Suginami","lat":35.7045,"lng":139.6359},
+    {"id":"c023","name":"Nishi-Ogikubo Station","type":"station","ward":"Suginami","lat":35.7040,"lng":139.5990},
+    {"id":"c024","name":"Kichijoji Inokashira Park Entrance","type":"park","ward":"Suginami","lat":35.7014,"lng":139.5791},
+    {"id":"c025","name":"Shimoigusa Athletic Park","type":"park","ward":"Suginami","lat":35.7280,"lng":139.6180},
+
+    {"id":"c026","name":"Nakano Sun Plaza","type":"public","ward":"Nakano","lat":35.7078,"lng":139.6640},
+    {"id":"c027","name":"Araiyakushi-mae Station","type":"station","ward":"Nakano","lat":35.7186,"lng":139.6591},
+    {"id":"c028","name":"Toritsu-Kasei Station","type":"station","ward":"Nakano","lat":35.7340,"lng":139.6488},
+    {"id":"c029","name":"Meiji University Nakano","type":"university","ward":"Nakano","lat":35.7077,"lng":139.6623},
+
+    {"id":"c030","name":"Nerima Ward Office","type":"public","ward":"Nerima","lat":35.7355,"lng":139.6517},
+    {"id":"c031","name":"Hikarigaoka Park","type":"park","ward":"Nerima","lat":35.7617,"lng":139.6378},
+    {"id":"c032","name":"Oizumi-gakuen Station","type":"station","ward":"Nerima","lat":35.7490,"lng":139.5869},
+    {"id":"c033","name":"Toshimaen Station","type":"station","ward":"Nerima","lat":35.7373,"lng":139.6431},
+    {"id":"c034","name":"Nerima Library Central","type":"library","ward":"Nerima","lat":35.7373,"lng":139.6539},
+
+    {"id":"c035","name":"Itabashi Ward Office","type":"public","ward":"Itabashi","lat":35.7513,"lng":139.7093},
+    {"id":"c036","name":"Takashimadaira Station","type":"station","ward":"Itabashi","lat":35.7754,"lng":139.6797},
+    {"id":"c037","name":"Itabashi-Honcho Station","type":"station","ward":"Itabashi","lat":35.7574,"lng":139.7122},
+    {"id":"c038","name":"Johoku Central Park","type":"park","ward":"Itabashi","lat":35.7695,"lng":139.6926},
+
+    {"id":"c039","name":"Akabane Park","type":"park","ward":"Kita","lat":35.7801,"lng":139.7196},
+    {"id":"c040","name":"Tabata Station Asuka","type":"station","ward":"Kita","lat":35.7378,"lng":139.7608},
+    {"id":"c041","name":"Kita Ward Library","type":"library","ward":"Kita","lat":35.7528,"lng":139.7336},
+
+    {"id":"c042","name":"Nippori Station","type":"station","ward":"Arakawa","lat":35.7281,"lng":139.7708},
+    {"id":"c043","name":"Machiya Station","type":"station","ward":"Arakawa","lat":35.7377,"lng":139.7826},
+    {"id":"c044","name":"Arakawa Sports Center","type":"public","ward":"Arakawa","lat":35.7403,"lng":139.7920},
+
+    {"id":"c045","name":"Adachi Ward Central Library","type":"library","ward":"Adachi","lat":35.7750,"lng":139.8046},
+    {"id":"c046","name":"Takenotsuka Station","type":"station","ward":"Adachi","lat":35.7807,"lng":139.7896},
+    {"id":"c047","name":"Ayase Park","type":"park","ward":"Adachi","lat":35.7605,"lng":139.8280},
+
+    {"id":"c048","name":"Tateishi Station","type":"station","ward":"Katsushika","lat":35.7362,"lng":139.8463},
+    {"id":"c049","name":"Katsushika Symphony Hills","type":"public","ward":"Katsushika","lat":35.7437,"lng":139.8467},
+    {"id":"c050","name":"Horikirishobuen Park","type":"park","ward":"Katsushika","lat":35.7503,"lng":139.8248},
+
+    {"id":"c051","name":"Edogawa Ward Office","type":"public","ward":"Edogawa","lat":35.7067,"lng":139.8683},
+    {"id":"c052","name":"Koiwa Station Central","type":"station","ward":"Edogawa","lat":35.7316,"lng":139.8810},
+    {"id":"c053","name":"Kasai Station","type":"station","ward":"Edogawa","lat":35.6629,"lng":139.8738},
+
+    {"id":"c054","name":"Toyosu Market Park","type":"park","ward":"Koto","lat":35.6536,"lng":139.7867},
+    {"id":"c055","name":"Kiyosumi Garden","type":"park","ward":"Koto","lat":35.6791,"lng":139.7956},
+    {"id":"c056","name":"Shin-Kiba Station","type":"station","ward":"Koto","lat":35.6460,"lng":139.8275},
+
+    {"id":"c057","name":"Minami-Senju Station","type":"station","ward":"Arakawa","lat":35.7332,"lng":139.7980},
+
+    {"id":"c058","name":"Tokyo Tech Ookayama","type":"university","ward":"Meguro","lat":35.6052,"lng":139.6842},
+    {"id":"c059","name":"Gakugei University","type":"university","ward":"Meguro","lat":35.6335,"lng":139.6836},
+    {"id":"c060","name":"Meguro Ward Office","type":"public","ward":"Meguro","lat":35.6413,"lng":139.6983},
+
+    {"id":"c061","name":"Tokyo Skytree Sumida Park","type":"park","ward":"Sumida","lat":35.7148,"lng":139.8017},
+    {"id":"c062","name":"Hikifune Station","type":"station","ward":"Sumida","lat":35.7207,"lng":139.8111},
+
+    {"id":"c063","name":"Ueno Zoo Main Gate","type":"park","ward":"Taito","lat":35.7167,"lng":139.7712},
+    {"id":"c064","name":"Asakusabashi Station","type":"station","ward":"Taito","lat":35.6982,"lng":139.7870}
+  ]
+}

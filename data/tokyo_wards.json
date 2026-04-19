@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "source": "Tokyo Metropolitan Government Statistics Division + Japan Statistics Bureau (2024 estimates)",
+    "description": "Tokyo 23 Special Wards (特別区) with administrative metadata. Population figures are 2024 estimates; area in km². Used as contextual overlay; primary spatial analysis runs on a runtime-generated hex grid.",
+    "count": 23
+  },
+  "wards": [
+    {"id":"w01","name":"Chiyoda","name_jp":"千代田区","lat":35.6940,"lng":139.7536,"pop":67401,"area_km2":11.66,"daytime_pop":905700},
+    {"id":"w02","name":"Chuo","name_jp":"中央区","lat":35.6706,"lng":139.7720,"pop":176131,"area_km2":10.21,"daytime_pop":608600},
+    {"id":"w03","name":"Minato","name_jp":"港区","lat":35.6581,"lng":139.7516,"pop":260571,"area_km2":20.37,"daytime_pop":907900},
+    {"id":"w04","name":"Shinjuku","name_jp":"新宿区","lat":35.6938,"lng":139.7036,"pop":349385,"area_km2":18.22,"daytime_pop":770100},
+    {"id":"w05","name":"Bunkyo","name_jp":"文京区","lat":35.7080,"lng":139.7522,"pop":240069,"area_km2":11.29,"daytime_pop":346700},
+    {"id":"w06","name":"Taito","name_jp":"台東区","lat":35.7127,"lng":139.7804,"pop":211444,"area_km2":10.11,"daytime_pop":303400},
+    {"id":"w07","name":"Sumida","name_jp":"墨田区","lat":35.7106,"lng":139.8015,"pop":275085,"area_km2":13.77,"daytime_pop":267400},
+    {"id":"w08","name":"Koto","name_jp":"江東区","lat":35.6729,"lng":139.8171,"pop":524310,"area_km2":43.01,"daytime_pop":582500},
+    {"id":"w09","name":"Shinagawa","name_jp":"品川区","lat":35.6092,"lng":139.7302,"pop":414520,"area_km2":22.84,"daytime_pop":570500},
+    {"id":"w10","name":"Meguro","name_jp":"目黒区","lat":35.6413,"lng":139.6983,"pop":288088,"area_km2":14.67,"daytime_pop":263100},
+    {"id":"w11","name":"Ota","name_jp":"大田区","lat":35.5613,"lng":139.7161,"pop":737176,"area_km2":61.86,"daytime_pop":658400},
+    {"id":"w12","name":"Setagaya","name_jp":"世田谷区","lat":35.6463,"lng":139.6532,"pop":943664,"area_km2":58.05,"daytime_pop":849300},
+    {"id":"w13","name":"Shibuya","name_jp":"渋谷区","lat":35.6640,"lng":139.6982,"pop":243883,"area_km2":15.11,"daytime_pop":579400},
+    {"id":"w14","name":"Nakano","name_jp":"中野区","lat":35.7074,"lng":139.6638,"pop":342246,"area_km2":15.59,"daytime_pop":307700},
+    {"id":"w15","name":"Suginami","name_jp":"杉並区","lat":35.6995,"lng":139.6364,"pop":585069,"area_km2":34.06,"daytime_pop":477700},
+    {"id":"w16","name":"Toshima","name_jp":"豊島区","lat":35.7262,"lng":139.7157,"pop":303000,"area_km2":13.01,"daytime_pop":416200},
+    {"id":"w17","name":"Kita","name_jp":"北区","lat":35.7528,"lng":139.7336,"pop":357225,"area_km2":20.61,"daytime_pop":322100},
+    {"id":"w18","name":"Arakawa","name_jp":"荒川区","lat":35.7361,"lng":139.7831,"pop":219067,"area_km2":10.16,"daytime_pop":196900},
+    {"id":"w19","name":"Itabashi","name_jp":"板橋区","lat":35.7513,"lng":139.7093,"pop":583055,"area_km2":32.22,"daytime_pop":484200},
+    {"id":"w20","name":"Nerima","name_jp":"練馬区","lat":35.7356,"lng":139.6517,"pop":751933,"area_km2":48.08,"daytime_pop":596600},
+    {"id":"w21","name":"Adachi","name_jp":"足立区","lat":35.7750,"lng":139.8046,"pop":697562,"area_km2":53.25,"daytime_pop":577900},
+    {"id":"w22","name":"Katsushika","name_jp":"葛飾区","lat":35.7434,"lng":139.8473,"pop":463349,"area_km2":34.80,"daytime_pop":380200},
+    {"id":"w23","name":"Edogawa","name_jp":"江戸川区","lat":35.7067,"lng":139.8683,"pop":694832,"area_km2":49.90,"daytime_pop":569100}
+  ]
+}

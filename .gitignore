@@ -1,0 +1,31 @@
+## OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+## Node (in case tooling is added later)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+package-lock.json
+
+## Python (for the local http.server workflow)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+## Build artifacts (none expected, but just in case)
+dist/
+build/
+
+## Local scratch
+*.log
+.env
+.env.local
+scratch/
